@@ -2,6 +2,9 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.template import Template, Context
 from .models import PrivateNote
 import urllib.request
+from urllib.parse import urlparse
+import socket
+import ipaddress
 
 def view_note(request, note_id):
     # FLAW 1: A01 Broken Access Control (IDOR)
@@ -40,13 +43,20 @@ def fetch_external(request):
     # FLAW 5: A10:2021 Server Side Request Forgery (SSRF)
     # The backend fetches an external resource using unvalidated user input, 
     # allowing attackers to make requests to internal network configurations or metadata endpoints.
-    response = urllib.request.urlopen(url)
-    return HttpResponse(response.read())
-
-    # THE FIX: (Uncomment the block below and comment out the two active lines above)
-    # Validating the URL against a strict allowlist prevents unauthorized internal requests.
-    # allowed_urls = ['http://example.com']
-    # if url not in allowed_urls:
-    #     return HttpResponseForbidden("SSRF Attempt Blocked")
     # response = urllib.request.urlopen(url)
     # return HttpResponse(response.read())
+
+    # THE FIX: (Uncomment the block below and comment out the two active lines above)
+    parsed = urlparse(url)
+    if parsed.scheme not in ['http', 'https']:
+        return HttpResponseForbidden("Blocked: Invalid protocol")
+    try:
+        ip = socket.gethostbyname(parsed.hostname)
+        parsed_ip = ipaddress.ip_address(ip)
+        if parsed_ip.is_private or parsed_ip.is_loopback or parsed_ip.is_link_local:
+            return HttpResponseForbidden("Blocked: Internal or reserved IP address")
+    except Exception:
+        return HttpResponseForbidden("Blocked: Invalid hostname")
+    
+    response = urllib.request.urlopen(url, timeout=5)
+    return HttpResponse(response.read())
