@@ -43,20 +43,20 @@ def fetch_external(request):
     # FLAW 5: A10:2021 Server Side Request Forgery (SSRF)
     # The backend fetches an external resource using unvalidated user input, 
     # allowing attackers to make requests to internal network configurations or metadata endpoints.
-    # response = urllib.request.urlopen(url)
-    # return HttpResponse(response.read())
+    response = urllib.request.urlopen(url)
+    return HttpResponse(response.read())
 
     # THE FIX: (Uncomment the block below and comment out the two active lines above)
-    parsed = urlparse(url)
-    if parsed.scheme not in ['http', 'https']:
-        return HttpResponseForbidden("Blocked: Invalid protocol")
-    try:
-        ip = socket.gethostbyname(parsed.hostname)
-        parsed_ip = ipaddress.ip_address(ip)
-        if parsed_ip.is_private or parsed_ip.is_loopback or parsed_ip.is_link_local:
-            return HttpResponseForbidden("Blocked: Internal or reserved IP address")
-    except Exception:
-        return HttpResponseForbidden("Blocked: Invalid hostname")
+    # parsed = urlparse(url)
+    # if parsed.scheme not in ['http', 'https']:
+    #     return HttpResponseForbidden("Blocked: Invalid protocol")
+    # try:
+    #     ip = socket.gethostbyname(parsed.hostname)
+    #     parsed_ip = ipaddress.ip_address(ip)
+    #     if parsed_ip.is_private or parsed_ip.is_loopback or parsed_ip.is_link_local:
+    #         return HttpResponseForbidden("Blocked: Internal or reserved IP address")
+    # except Exception:
+    #     return HttpResponseForbidden("Blocked: Invalid hostname")
     
-    response = urllib.request.urlopen(url, timeout=5)
-    return HttpResponse(response.read())
+    # response = urllib.request.urlopen(url, timeout=5)
+    # return HttpResponse(response.read())
